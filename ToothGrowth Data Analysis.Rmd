@@ -1,0 +1,111 @@
+---
+title: "Data Analysis using ToothGrowth dataset"
+author: "Dinh Tuan Phan"
+date: "4/29/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Synopsis
+
+In the second portion of the project, we're going to analyze the ToothGrowth data in the R datasets package.
+
+1. Load the ToothGrowth data and perform some basic exploratory data analyses
+2. Provide a basic summary of the data.
+3. Use confidence intervals and/or hypothesis tests to compare tooth growth by supp and dose. (Only use the techniques from class, even if there's other approaches worth considering)
+4. State your conclusions and the assumptions needed for your conclusions.
+
+
+## Introduction
+
+The ToothGrowth Dataset describes the response of the length of odontoblasts (teeth) in each of 10 guinea pigs at each of three dose levels of Vitamin C (0.5, 1, and 2 mg) with each of two delivery methods (orange juice or ascorbic acid). The data contain 60 observations on 3 variables:
+
+- len numeric Tooth length,
+- supp factor Supplement type (VC or OJ),
+- dose numeric Dose in milligrams.
+
+In this project, we will use the hypothesis tests to compare tooth growth by supplement and dose.
+
+
+## Loading packages
+
+```{r, message= FALSE, warning= FALSE}
+library("data.table")
+library("ggplot2")
+library("datasets")
+library("dplyr")
+```
+
+## Load data
+
+We visualize the data to get the properties of the parameters.
+
+```{r}
+ggplot(data=ToothGrowth, aes(x=as.factor(dose), y=len, fill=supp)) +
+  geom_boxplot() +
+  facet_grid(. ~ supp) +
+  xlab("Dose (miligrams)") +
+  ylab("Tooth length (mm)") +
+  guides(fill=guide_legend(title="Supplement"))
+
+```
+
+The boxplot shows that the tooth length has positive correlation with the dosage of both supplements(VC/OJ).
+
+
+```{r, message=F}
+ToothGrowth %>%
+  group_by(supp,dose) %>%
+  summarise(Q25th_len = quantile(len,0.25),
+            Q50th_len = quantile(len,0.5),
+            Q75th_len = quantile(len,0.75),
+            avg_len = mean(len),            
+            sd_len = sd(len)) -> data
+```
+
+
+Summary data
+
+```{r}
+head(data)
+```
+
+We can study the relations between len and supp and dose by using t hypothesis test. The following table shows the t-test results combined with p-value and confidence intervals.
+
+
+```{r}
+tests = list()
+dose = c(0.5,1,2)
+for (d in dose) {
+  ojd = ToothGrowth$len[ToothGrowth$dose == d & ToothGrowth$supp == "OJ"]
+  vcd = ToothGrowth$len[ToothGrowth$dose == d & ToothGrowth$supp == "VC"]
+  t <- t.test(ojd, vcd)
+  id <- paste0("OJ","-", "VC",",",d)
+  tests <- rbind(tests, list(id=id, p.value=t$p.value, conf.lo=t$conf.int[1], conf.hi=t$conf.int[2]))
+}
+```
+
+
+Summary data
+
+
+```{r}
+head(tests)
+```
+
+
+## Conclusions
+
+From the t-test results, we need to reject the following hypotheses:
+
+- The difference of mean-value between OJ and VC in dose 0.5 is zero.
+- The difference of mean-value between OJ and VC in dose 1.0 is zero.
+
+We cannot distinguish the difference between OJ and VC in dose 2. Therefore, we can conclude that in dose 0.5 and dose 1, the tooth length with OJ supplement is longer than that with VC. However, in dose 2, the tooth length with OJ and VC supplements does not have significant difference.
+
+
